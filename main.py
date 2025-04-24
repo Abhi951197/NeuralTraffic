@@ -237,7 +237,7 @@ def main():
     video_sources = [
         'static/videos/27260-362770008_small.mp4',
         'C:/Users/abhis/OneDrive/Desktop/NeuraLTraffic/static/videos/agra-india-november-17-2012-traffic-on-indian-street-in-agra-india-17-nov-2012-SBV-347430175-preview.mp4',
-        'static/videos/traffic-congestion-and-street-life-in-the-city-of-jaipur-pink-gate-city-walls--SBV-300214180-preview.mp4', 
+        'static/videos/WhatsApp Video 2025-04-24 at 20.27.45_8550a03e.mp4', 
         'static/videos/udaipur-india-november-24-2012-traffic-on-indian-street-in-udaipur-SBV-347557199-preview.mp4'
     ]
     

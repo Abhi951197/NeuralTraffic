@@ -31,9 +31,11 @@ class TrafficController:
         # Calculate additional time based on vehicle count and types
         vehicle_count = sum(self.lane_vehicle_counts[lane_idx].values())
         priority = self.lane_priorities[lane_idx]
+        print(f"Lane {lane_idx + 1} - Vehicle Count: {vehicle_count}, Priority: {priority}")
     
         # Logarithmic scaling to prevent excessively long green times
         additional_time = min(30, 5 * np.log2(priority + 1))
+        print(f"Lane {lane_idx + 1} - Additional Time: {additional_time:.2f} seconds")
     
         return base_time + additional_time
     
@@ -161,6 +163,8 @@ class TrafficController:
                 if 'emergency' in self.lane_vehicle_counts[i] and self.lane_vehicle_counts[i]['emergency'] > 0:
                     emergency_detected = True
                     emergency_lane = i
+                    print(f"⚠️ EMERGENCY VEHICLE DETECTED in Lane {i+1}! Switching traffic priority immediately")
+
                     break
             
             if emergency_detected:
