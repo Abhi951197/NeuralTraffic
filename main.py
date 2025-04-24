@@ -22,6 +22,13 @@ class TrafficManagementSystem:
         self.video_sources = video_sources
         self.lane_count = len(video_sources)
         self.captures = [cv2.VideoCapture(src) for src in video_sources]
+        
+        # Set up looping for video file (4th lane)
+        if isinstance(video_sources[3], str) and os.path.isfile(video_sources[3]):
+            self.is_video_file = [isinstance(src, str) and os.path.isfile(src) for src in video_sources]
+        else:
+            self.is_video_file = [False] * self.lane_count
+            
         self.is_running = False
         
         self.frame_dirs = []
@@ -81,8 +88,9 @@ class TrafficManagementSystem:
 
     def preprocess_video(self, lane_idx):
         cap = self.captures[lane_idx]
-        frame_interval = 5  # process every nth frame
-        chunk_frames = 30  # number of frames per chunk
+        frame_interval = 5  # Now process every frame but control timing with sleep
+        chunk_frames = 30
+        fps = 1  # Target 5 frames per second
 
         while self.is_running:
             chunk_images = []
@@ -90,7 +98,16 @@ class TrafficManagementSystem:
             
             while count < chunk_frames and self.is_running:
                 ret, frame = cap.read()
-                if not ret:
+                
+                # For video files that need looping
+                if not ret and self.is_video_file[lane_idx]:
+                    # Reset the video to the beginning
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                    ret, frame = cap.read()
+                    if not ret:  # If still can't read, there's another issue
+                        break
+                elif not ret:
+                    # For webcams, just continue trying
                     continue
                 
                 if count % frame_interval == 0:
@@ -108,7 +125,8 @@ class TrafficManagementSystem:
                 
                 self.latest_frames[lane_idx] = selected_frame.copy()
             
-            time.sleep(0.1)
+            # Sleep to maintain target FPS
+            time.sleep(1/fps)
 
     def process_frames(self):
         while self.is_running:
@@ -144,7 +162,7 @@ class TrafficManagementSystem:
                 
                 priority = self.traffic_controller.lane_priorities[lane_idx]
                 cv2.rectangle(frame, (10, 60), (150, 100), (0, 0, 0), -1)
-                cv2.putText(frame, f"Priority: {priority}", (15, 85), cv2.FONT_HERSHEY_SIMPLEX, 
+                cv2.putText(frame, f"Total Weights: {priority}", (15, 85), cv2.FONT_HERSHEY_SIMPLEX, 
                             0.7, (255, 255, 255), 2)
                 
                 self.gui.update_lane_display(lane_idx, frame, 
@@ -160,9 +178,7 @@ class TrafficManagementSystem:
             cap.release()
 
 def main():
-    # Use camera indices instead of video file paths
-    # Ensure the system has at least 4 cameras or virtual cameras for testing
-    video_sources = [0, 1, 2,"static/videos/istockphoto-866517852-640_adpp_is.mp4" ]
+    video_sources = ["static/videos/27260-362770008_small.mp4","static/videos/istockphoto-866517852-640_adpp_is.mp4","static/videos/WhatsApp Video 2025-04-24 at 11.39.55 PM.mp4","static/videos/udaipur-india-november-24-2012-traffic-on-indian-street-in-udaipur-SBV-347557199-preview.mp4"]
     
     system = TrafficManagementSystem(video_sources)
     system.run()

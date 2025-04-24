@@ -2,219 +2,211 @@ import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
 import cv2
+import numpy as np
+import time
 
 class SystemGUI:
     def __init__(self, system):
-        """Initialize the GUI for the traffic management system"""
         self.system = system
-        
-        # Create main window
         self.root = tk.Tk()
-        self.root.title("AI-Powered Traffic Management System")
+        self.root.title("Smart Traffic Management System")
         self.root.geometry("1200x800")
+        self.root.configure(bg="#2f3e46")
         
-        # Create GUI components
+        # For image display conversion
+        self.photo_images = [None] * system.lane_count  # Store PhotoImage references
+        self.last_fps_update = time.time()
+        self.frame_count = 0
+        
         self.setup_gui()
     
     def setup_gui(self):
-        """Set up the GUI layout and components"""
-        # Create two main sections: video grid and traffic control panel
-        main_frame = ttk.Frame(self.root)
-        main_frame.pack(fill=tk.BOTH, expand=True)
-        
-        left_frame = ttk.Frame(main_frame)
-        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
-        right_frame = ttk.Frame(main_frame)
-        right_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=10, pady=10)
-        
-        # Create video grid
-        video_grid = ttk.Frame(left_frame)
-        video_grid.pack(fill=tk.BOTH, expand=True)
-        
-        # Create traffic control panel
-        traffic_panel = ttk.LabelFrame(right_frame, text="Traffic Control")
-        traffic_panel.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-        
-        # Create traffic light indicators and priority displays
-        self.traffic_indicators = []
+        header = tk.Frame(self.root, bg="#2c3e50")
+        header.pack(fill=tk.X)
+
+        title = tk.Label(header, text="NEURALTRAFFIC", font=("Arial", 20, "bold"), bg="#2c3e50", fg="white", pady=10)
+        title.pack(side=tk.LEFT, padx=20)
+
+        self.status_label = tk.Label(header, text="Status: Ready", font=("Arial", 12), bg="#2c3e50", fg="lightgreen")
+        self.status_label.pack(side=tk.RIGHT, padx=20)
+
+        main_frame = tk.Frame(self.root, bg="#2f3e46")
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        self.video_labels = []
         self.priority_labels = []
         self.vehicle_count_labels = []
-        
-        for i in range(self.system.lane_count):
-            # Create lane frame in traffic panel
-            lane_frame = ttk.LabelFrame(traffic_panel, text=f"Lane {i+1}")
-            lane_frame.pack(fill=tk.X, padx=5, pady=5)
-            
-            # Create traffic light indicator
-            indicator_frame = ttk.Frame(lane_frame)
-            indicator_frame.pack(fill=tk.X, pady=5)
-            
-            ttk.Label(indicator_frame, text="Signal:").pack(side=tk.LEFT, padx=5)
-            traffic_indicator = ttk.Label(indicator_frame, text="RED", background="red", foreground="white", width=10)
-            traffic_indicator.pack(side=tk.LEFT, padx=5)
-            self.traffic_indicators.append(traffic_indicator)
-            
-            # Create priority display
-            priority_frame = ttk.Frame(lane_frame)
-            priority_frame.pack(fill=tk.X, pady=5)
-            
-            ttk.Label(priority_frame, text="Priority:").pack(side=tk.LEFT, padx=5)
-            priority_label = ttk.Label(priority_frame, text="0")
-            priority_label.pack(side=tk.LEFT, padx=5)
-            self.priority_labels.append(priority_label)
-            
-            # Create vehicle count display
-            vehicle_count_frame = ttk.Frame(lane_frame)
-            vehicle_count_frame.pack(fill=tk.X, pady=5)
-            
-            ttk.Label(vehicle_count_frame, text="Vehicles:").pack(side=tk.LEFT, padx=5)
-            vehicle_count_label = ttk.Label(vehicle_count_frame, text="No vehicles")
-            vehicle_count_label.pack(side=tk.LEFT, padx=5)
-            self.vehicle_count_labels.append(vehicle_count_label)
-        
-        # Create video displays in grid
-        self.video_frames = []
-        self.video_labels = []
-        
-        for i in range(self.system.lane_count):
-            # Create frame for each lane
-            row, col = i // 2, i % 2
-            lane_frame = ttk.LabelFrame(video_grid, text=f"Lane {i+1}")
-            lane_frame.grid(row=row, column=col, padx=5, pady=5, sticky="nsew")
-            
-            # Create video display
-            video_frame = ttk.Frame(lane_frame)
-            video_frame.pack(pady=5, fill=tk.BOTH, expand=True)
-            video_label = ttk.Label(video_frame)
-            video_label.pack(fill=tk.BOTH, expand=True)
-            
-            self.video_frames.append(video_frame)
-            self.video_labels.append(video_label)
-        
-        # Configure grid weights
-        for i in range(2):
-            video_grid.grid_columnconfigure(i, weight=1)
-            video_grid.grid_rowconfigure(i, weight=1)
-        
-        # Create control panel
-        control_frame = ttk.LabelFrame(right_frame, text="System Control")
-        control_frame.pack(fill=tk.X, padx=5, pady=5)
-        
-        # Green time slider
-        ttk.Label(control_frame, text="Green Light Duration (sec):").pack(anchor=tk.W, padx=5, pady=5)
-        self.green_slider = ttk.Scale(control_frame, from_=5, to=60, orient=tk.HORIZONTAL)
-        self.green_slider.set(self.system.traffic_controller.green_time)
-        self.green_slider.pack(fill=tk.X, padx=5, pady=5)
-        self.green_slider.bind("<ButtonRelease-1>", lambda e: self.set_green_time())
-        
-        # Yellow time slider
-        ttk.Label(control_frame, text="Yellow Light Duration (sec):").pack(anchor=tk.W, padx=5, pady=5)
-        self.yellow_slider = ttk.Scale(control_frame, from_=1, to=10, orient=tk.HORIZONTAL)
-        self.yellow_slider.set(self.system.traffic_controller.yellow_time)
-        self.yellow_slider.pack(fill=tk.X, padx=5, pady=5)
-        self.yellow_slider.bind("<ButtonRelease-1>", lambda e: self.set_yellow_time())
-        
-        # Start/Stop button
-        self.start_stop_button = ttk.Button(control_frame, text="Start System", command=self.system.toggle_system)
-        self.start_stop_button.pack(fill=tk.X, padx=5, pady=5)
-        
-        # Status label
-        self.status_label = ttk.Label(control_frame, text="System Ready")
-        self.status_label.pack(fill=tk.X, padx=5, pady=5)
-        
-        # Add analytics section
-        analytics_frame = ttk.LabelFrame(right_frame, text="Traffic Analytics")
-        analytics_frame.pack(fill=tk.X, padx=5, pady=5)
-        
-        self.congestion_label = ttk.Label(analytics_frame, text="System Congestion: Normal")
-        self.congestion_label.pack(fill=tk.X, padx=5, pady=5)
-        
-        self.pattern_label = ttk.Label(analytics_frame, text="Traffic Pattern: Normal")
-        self.pattern_label.pack(fill=tk.X, padx=5, pady=5)
-        
         self.wait_time_labels = []
+        self.signal_indicators = []
+
+        grid_frame = tk.Frame(main_frame, bg="#2f3e46")
+        grid_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+
         for i in range(self.system.lane_count):
-            wait_time_label = ttk.Label(analytics_frame, text=f"Lane {i+1} Wait Time: 0 sec")
-            wait_time_label.pack(fill=tk.X, padx=5, pady=2)
-            self.wait_time_labels.append(wait_time_label)
-    
-    def set_green_time(self):
-        """Update green time based on slider value"""
-        new_time = int(self.green_slider.get())
-        self.system.traffic_controller.set_green_time(new_time)
-    
-    def set_yellow_time(self):
-        """Update yellow time based on slider value"""
-        new_time = int(self.yellow_slider.get())
-        self.system.traffic_controller.set_yellow_time(new_time)
-    
-    def update_system_status(self, status_text, button_text):
-        """Update system status and button text"""
-        self.status_label.config(text=status_text)
-        self.start_stop_button.config(text=button_text)
-    
-    def update_traffic_indicator(self, lane_idx):
-        """Update traffic light indicator for a specific lane"""
-        state = self.system.traffic_controller.traffic_states[lane_idx]
-        indicator = self.traffic_indicators[lane_idx]
+            frame = tk.Frame(grid_frame, bg="#1e2a33", bd=2, relief=tk.RIDGE)
+            frame.grid(row=i//2, column=i%2, padx=10, pady=10, sticky="nsew")
+
+            # Header with lane label and signal indicator
+            header_frame = tk.Frame(frame, bg="#34495e")
+            header_frame.pack(fill=tk.X)
+            
+            lane_label = tk.Label(header_frame, text=f"Lane {i+1}", font=("Arial", 12, "bold"), bg="#34495e", fg="white", padx=5)
+            lane_label.pack(side=tk.LEFT)
+            
+            # Traffic signal indicator
+            signal_indicator = tk.Canvas(header_frame, width=20, height=20, bg="#34495e", highlightthickness=0)
+            signal_indicator.create_oval(2, 2, 18, 18, fill="red", outline="white", width=1, tags="signal")
+            signal_indicator.pack(side=tk.RIGHT, padx=10)
+            self.signal_indicators.append(signal_indicator)
+
+            video_canvas = tk.Label(frame, bg="black", height=10)
+            video_canvas.pack(fill=tk.BOTH, expand=True, pady=5, padx=5)
+            self.video_labels.append(video_canvas)
+
+            info_text = tk.StringVar()
+            info_label = tk.Label(frame, textvariable=info_text, bg="#ecf0f1", font=("Arial", 10), anchor="w", justify="left")
+            info_label.pack(fill=tk.X, padx=5)
+            self.vehicle_count_labels.append(info_text)
+
+            bottom_frame = tk.Frame(frame, bg="#ecf0f1")
+            bottom_frame.pack(fill=tk.X, padx=5, pady=2)
+
+            tk.Label(bottom_frame, text="Priority:", bg="#ecf0f1").pack(side=tk.LEFT)
+            priority = tk.Label(bottom_frame, text="0", width=5, bg="white")
+            priority.pack(side=tk.LEFT, padx=5)
+            self.priority_labels.append(priority)
+
+            wait_time = tk.Label(bottom_frame, text="Wait: 0s", bg="#ecf0f1")
+            wait_time.pack(side=tk.RIGHT)
+            self.wait_time_labels.append(wait_time)
+
+        grid_frame.grid_rowconfigure(0, weight=1)
+        grid_frame.grid_rowconfigure(1, weight=1)
+        grid_frame.grid_columnconfigure(0, weight=1)
+        grid_frame.grid_columnconfigure(1, weight=1)
+
+        # Control panel
+        control_panel = tk.Frame(self.root, bg="#34495e", padx=10, pady=5)
+        control_panel.pack(fill=tk.X, side=tk.BOTTOM)
         
-        if state == 'red':
-            indicator.config(text="RED", background="red", foreground="white")
-        elif state == 'yellow':
-            indicator.config(text="YELLOW", background="yellow", foreground="black")
-        else:  # green
-            indicator.config(text="GREEN", background="green", foreground="white")
+        # Time control settings
+        control_frame = tk.Frame(control_panel, bg="#34495e")
+        control_frame.pack(side=tk.LEFT, fill=tk.Y)
+        
+        tk.Label(control_frame, text="Green Time (s):", bg="#34495e", fg="white").grid(row=0, column=0, padx=5, pady=2)
+        green_time_var = tk.IntVar(value=self.system.traffic_controller.green_time)
+        green_spinner = tk.Spinbox(control_frame, from_=5, to=60, width=5, textvariable=green_time_var)
+        green_spinner.grid(row=0, column=1, padx=5, pady=2)
+        
+        tk.Button(control_frame, text="Set", bg="#95a5a6", 
+                 command=lambda: self.system.traffic_controller.set_green_time(green_time_var.get())).grid(row=0, column=2, padx=5)
+        
+        tk.Label(control_frame, text="Yellow Time (s):", bg="#34495e", fg="white").grid(row=1, column=0, padx=5, pady=2)
+        yellow_time_var = tk.IntVar(value=self.system.traffic_controller.yellow_time)
+        yellow_spinner = tk.Spinbox(control_frame, from_=3, to=10, width=5, textvariable=yellow_time_var)
+        yellow_spinner.grid(row=1, column=1, padx=5, pady=2)
+        
+        tk.Button(control_frame, text="Set", bg="#95a5a6", 
+                 command=lambda: self.system.traffic_controller.set_yellow_time(yellow_time_var.get())).grid(row=1, column=2, padx=5)
+
+        self.start_stop_button = tk.Button(control_panel, text="Start System", bg="green", fg="white", 
+                                          command=self.system.toggle_system, width=15, height=2)
+        self.start_stop_button.pack(side=tk.RIGHT, padx=20)
+
+        self.fps_label = tk.Label(control_panel, text="FPS: 0", bg="#34495e", fg="white")
+        self.fps_label.pack(side=tk.RIGHT, padx=10)
     
     def update_lane_display(self, lane_idx, frame, traffic_state, priority, vehicle_counts):
-        """Update display for a specific lane"""
-        # Convert frame to TkInter format
-        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        img = Image.fromarray(rgb_frame)
-        img = ImageTk.PhotoImage(image=img)
+        """Update the display for a specific lane with current data"""
+        # Count frames for FPS calculation
+        self.frame_count += 1
+        current_time = time.time()
+        elapsed = current_time - self.last_fps_update
         
-        # Update image
-        self.video_labels[lane_idx].config(image=img)
-        self.video_labels[lane_idx].image = img
+        # Update FPS every second
+        if elapsed > 1.0:
+            fps = self.frame_count / elapsed
+            self.fps_label.config(text=f"FPS: {fps:.1f}")
+            self.frame_count = 0
+            self.last_fps_update = current_time
+        
+        # Convert OpenCV BGR to RGB for tkinter
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        
+        # Resize to fit the display area if needed
+        height, width, _ = rgb_frame.shape
+        target_width = 400  # Adjust as needed for your GUI
+        target_height = int(height * (target_width / width))
+        resized_frame = cv2.resize(rgb_frame, (target_width, target_height))
+        
+        # Convert to PhotoImage
+        img = Image.fromarray(resized_frame)
+        photo = ImageTk.PhotoImage(image=img)
+        
+        # Store reference to prevent garbage collection
+        self.photo_images[lane_idx] = photo
+        
+        # Update the image in the label
+        self.video_labels[lane_idx].config(image=photo)
         
         # Update priority label
-        self.priority_labels[lane_idx].config(text=str(priority))
+        self.priority_labels[lane_idx].config(
+            text=str(int(priority)),
+            bg=self.get_priority_color(priority)
+        )
         
-        # Update vehicle count label
-        count_text = ", ".join([f"{v_type}: {count}" for v_type, count in vehicle_counts.items()])
-        if not count_text:
-            count_text = "No vehicles"
-        self.vehicle_count_labels[lane_idx].config(text=count_text)
-        
-        # Update traffic light indicator
-        self.update_traffic_indicator(lane_idx)
-        
-        # Update wait time label if available
-        if hasattr(self, 'wait_time_labels') and lane_idx < len(self.wait_time_labels):
-            wait_time = self.system.traffic_controller.lane_wait_times[lane_idx]
-            self.wait_time_labels[lane_idx].config(text=f"Lane {lane_idx+1} Wait Time: {wait_time:.1f} sec")
-    
-    def update_analytics_display(self):
-        """Update analytics display with current system state"""
-        # Update congestion status
-        system_congested, severe_imbalance = self.system.traffic_controller.detect_system_congestion()
-        
-        if severe_imbalance:
-            congestion_text = "System Congestion: Severe Imbalance"
-        elif system_congested:
-            congestion_text = "System Congestion: High"
+        # Update vehicle count info
+        count_text = "Vehicles: "
+        if vehicle_counts:
+            count_details = []
+            for vehicle_type, count in vehicle_counts.items():
+                count_details.append(f"{vehicle_type}: {count}")
+            count_text += ", ".join(count_details)
         else:
-            congestion_text = "System Congestion: Normal"
+            count_text += "None detected"
+        self.vehicle_count_labels[lane_idx].set(count_text)
         
-        self.congestion_label.config(text=congestion_text)
+        # Wait time (from traffic controller)
+        wait_time = self.system.traffic_controller.lane_wait_times[lane_idx]
+        self.wait_time_labels[lane_idx].config(text=f"Wait: {int(wait_time)}s")
         
-        # Update time pattern
-        pattern = self.system.traffic_controller.get_time_of_day_pattern()
-        pattern_names = {
-            'morning_rush': 'Morning Rush Hour',
-            'evening_rush': 'Evening Rush Hour',
-            'night': 'Night Mode',
-            'normal': 'Normal Daytime'
-        }
+        # Update traffic light state
+        self.update_traffic_indicator(lane_idx)
+    
+    def get_priority_color(self, priority):
+        """Return a color based on the priority value"""
+        if priority >= 50:  # Emergency vehicle
+            return "#e74c3c"  # Red
+        elif priority >= 20:
+            return "#f39c12"  # Orange
+        elif priority >= 10:
+            return "#f1c40f"  # Yellow
+        else:
+            return "#2ecc71"  # Green
+    
+    def update_traffic_indicator(self, lane_idx):
+        """Update the traffic signal indicator for the specified lane"""
+        light_state = self.system.traffic_controller.traffic_states[lane_idx].lower()
         
-        self.pattern_label.config(text=f"Traffic Pattern: {pattern_names.get(pattern, 'Normal')}")
+        canvas = self.signal_indicators[lane_idx]
+        canvas.delete("signal")
+        
+        if light_state == "green":
+            color = "green"
+        elif light_state == "yellow":
+            color = "yellow" 
+        else:  # red
+            color = "red"
+            
+        canvas.create_oval(2, 2, 18, 18, fill=color, outline="white", width=1, tags="signal")
+    
+    def update_system_status(self, status_text, button_text):
+        """Update the system status display and button text"""
+        self.status_label.config(text=f"Status: {status_text}")
+        self.start_stop_button.config(text=button_text)
+        
+        # Change button color based on system state
+        if "Start" in button_text:
+            self.start_stop_button.config(bg="green")
+        else:
+            self.start_stop_button.config(bg="red")
