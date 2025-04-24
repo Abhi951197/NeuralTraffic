@@ -1,12 +1,10 @@
 import cv2
 import numpy as np
-import torch
 import time
 import threading
 import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
-from ultralytics import YOLO
 import random
 import os
 import datetime
@@ -16,6 +14,7 @@ from collections import deque
 from lane import LaneProcessor
 from traffic_control import TrafficController
 from gui_components import SystemGUI
+
 
 class TrafficManagementSystem:
     def __init__(self, video_sources):
@@ -236,10 +235,10 @@ def main():
     # Replace with your video sources
     # Could be camera indices (0, 1, 2, 3) or video file paths
     video_sources = [
-        'trimmed_videos/lane1_trimmed.mp4',
-        'trimmed_videos/lane2_trimmed.mp4',
-        'trimmed_videos/lane3_trimmed.mp4', 
-        'trimmed_videos/lane4_trimmed.mp4'
+        'static/videos/27260-362770008_small.mp4',
+        'C:/Users/abhis/OneDrive/Desktop/NeuraLTraffic/static/videos/agra-india-november-17-2012-traffic-on-indian-street-in-agra-india-17-nov-2012-SBV-347430175-preview.mp4',
+        'static/videos/traffic-congestion-and-street-life-in-the-city-of-jaipur-pink-gate-city-walls--SBV-300214180-preview.mp4', 
+        'static/videos/udaipur-india-november-24-2012-traffic-on-indian-street-in-udaipur-SBV-347557199-preview.mp4'
     ]
     
     # Create and run the system
