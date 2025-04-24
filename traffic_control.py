@@ -94,6 +94,9 @@ class TrafficController:
         if severe_imbalance:
             # Prioritize the most congested lane with longer green time
             self.green_time_factor = 1.2
+            
+
+
     
     def get_time_of_day_pattern(self):
         """Determine traffic pattern based on time of day"""

@@ -20,7 +20,7 @@ class LaneProcessor:
             'motorcycle': 1,
             'truck': 5,
             'bus': 4,
-            'emergency': 10  # Special priority for emergency vehicles
+            'emergency': 50  # Special priority for emergency vehicles
             # Any emergency vehicles detected by Roboflow will be mapped to this
         }
 
