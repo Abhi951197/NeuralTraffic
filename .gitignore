@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+.venv/
+venv/
+env/
+
+# OS / editor / tool-local
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.claude/
+
+# Runtime output (per-lane frame dumps, trimmed videos, report CSVs)
+lane_0_frames/
+lane_1_frames/
+lane_2_frames/
+lane_3_frames/
+extracted_frames/
+trimmed_videos/
+traffic_reports/
+current/traffic_reports/
+
+# Large / local-only videos (exceed GitHub's 100 MB per-file limit or not needed in repo)
+static/videos/ambmerge.mp4
+
+# Scratch
+temp/
+temp.zip
+output_*.jpg
+output_*.mp4
+ambulance.jpg
